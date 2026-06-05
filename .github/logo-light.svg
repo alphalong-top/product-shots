@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 120" width="320" height="120">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0F172A"/>
+      <stop offset="100%" stop-color="#334155"/>
+    </linearGradient>
+  </defs>
+  <g transform="translate(20,28)">
+    <rect x="0" y="0" width="56" height="56" rx="10" fill="url(#g)"/>
+    <rect x="10" y="10" width="36" height="36" rx="4" fill="#F8FAFC"/>
+    <circle cx="28" cy="26" r="8" fill="#0F172A"/>
+    <rect x="14" y="36" width="28" height="8" rx="2" fill="#0F172A"/>
+  </g>
+  <g font-family="-apple-system, BlinkMacSystemFont, Inter, Segoe UI, sans-serif" fill="#0F172A">
+    <text x="96" y="62" font-size="30" font-weight="700" letter-spacing="-1">product-shots</text>
+    <text x="96" y="86" font-size="13" font-weight="500" fill="#64748B">one photo in. full visual stack out.</text>
+  </g>
+</svg>
