@@ -10,16 +10,27 @@ Color and CTA are the two most-coupled-to-objective parameters. Color signals in
 ## Execution Procedure
 
 ```
+def pick_color_strategy(industry, brand_kit) → color_strategy
+    # Resolve the working color palette for this creative.
+    # 1. start from INDUSTRY_COLOR_RULES[industry].primary_palette
+    # 2. if brand_kit.colors → override primary palette; industry palette demoted to accent
+    # 3. enforce max_colors / forbidden / temperature gates from INDUSTRY_COLOR_RULES[industry]
+    # Returns {primary: [...], accent: [...], forbidden: [...], max_colors, temperature}.
+
+def pick_cta_strategy(ad_objective, platform) → cta_strategy
+    # 1. cta_intensity = OBJECTIVE_RULES[ad_objective].cta_intensity  (low / mid / high)
+    # 2. cta_text      = pick_cta_phrase(ad_objective, industry)       (Section 12.1 / 12.2)
+    # 3. in_image_required = lookup §Section 12.3 (platform CTA delivery table)
+    # Returns {intensity, text, in_image_required, delivered_by_platform_ui}.
+
 # Step 4 — Color
-color_palette = INDUSTRY_COLOR_RULES[industry].primary_palette
-if user.brand_kit.colors: color_palette = user.brand_kit.colors  # override
-assert len(color_palette) ≤ INDUSTRY_COLOR_RULES[industry].max_colors  # default 3
-assert temperature_consistent(color_palette, INDUSTRY_COLOR_RULES[industry].temperature)
-assert no color in INDUSTRY_COLOR_RULES[industry].forbidden
+color_strategy = pick_color_strategy(industry, brief.brand_kit)
+assert len(color_strategy.primary) ≤ color_strategy.max_colors  # default 3
+assert temperature_consistent(color_strategy.primary, color_strategy.temperature)
+assert no color in color_strategy.forbidden
 
 # Step 4 — CTA
-cta_intensity = OBJECTIVE_RULES[ad_objective].cta_intensity   # low / mid / high
-cta_text      = pick_cta_phrase(ad_objective, industry)
+cta_strategy = pick_cta_strategy(ad_objective, platform)
 if platform in {meta_feed, linkedin}: cta_provided_by_platform = True
                                        # image CTA optional
 else: image_cta_required_for(promotion_conversion, app_download)

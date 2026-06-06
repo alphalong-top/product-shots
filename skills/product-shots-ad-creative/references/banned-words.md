@@ -3,6 +3,27 @@ name: banned-words
 description: Section 20 — Prompt Banned Words + Required Positive Instruction. The list of platform names, ad-UI terms, brand-tool names that must NEVER enter the image generator prompt (they trigger fake UI / watermarks / screenshot artifacts), plus the positive-preservation instruction that protects native packaging text on the product itself. Loaded by the parent skill's Execution Procedure Step 0 and re-validated at the Self-Check Gate alongside hard-constraints.md.
 ---
 
+## Execution Procedure
+
+```
+def register_protected_phrase(phrase) → registered_id
+    # Called by quick-start-and-fidelity preflight for each non-null copy field
+    # (brand_name / slogan / cta_text / price_or_offer).
+    # Appends the phrase to the session's protected_phrases registry. Returns the
+    # registry id used by sanitize_prompt() to swap the phrase in / out around
+    # banned-word filtering. Idempotent — re-registering the same phrase returns
+    # the existing id.
+
+def sanitize_prompt(prompt, protected_phrases) → sanitized_prompt
+    # 1. swap each protected_phrase with __USER_CONTENT_i__ placeholder
+    # 2. apply PROMPT_SAFE_REPLACEMENTS (banned phrase → safe paraphrase)
+    # 3. remove remaining PROMPT_BANNED_WORDS (case-insensitive whole-word)
+    # 4. restore __USER_CONTENT_i__ placeholders with the original phrases (quoted)
+    # 5. inject the Required Positive Instruction (Preserve Native Packaging Text)
+    # 6. collapse extra whitespace and return.
+    # Called by SKILL.md EP Step 5 for every per-platform prompt before image-gen dispatch.
+```
+
 ## Section 20 — Prompt Banned Words
 
 The following words are **banned in image-generation prompts**. AI image models render them as fake in-image UI, watermarks, or screenshot artifacts. They are allowed inside the skill (for format selection / industry matching / routing) but **must never appear in the text sent to the generator**.

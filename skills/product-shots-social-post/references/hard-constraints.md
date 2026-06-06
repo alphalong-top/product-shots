@@ -10,6 +10,16 @@ These rules are MUST-level. Read them at Execution Procedure Step 0 and validate
 ## Execution Procedure
 
 ```
+lookup(format) → dimensions, ratio, safe_zone
+
+# Resolve canonical spec for a given format key
+assert format ∈ {Feed Square, Feed Portrait, Feed Landscape, Carousel,
+                 Story, Reel Cover, Profile Picture, Feed Ad, Story/Reel Ad}
+dimensions = canonical px from §Dimensions
+ratio      = canonical ratio from §Dimensions
+safe_zone  = §Safe Zones row if format ∈ {Story, Reel Cover} else null
+return dimensions, ratio, safe_zone
+
 enforce_constraints(format, output_text, prompt_text) → pass | findings[]
 
 # Sizing

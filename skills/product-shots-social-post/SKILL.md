@@ -31,28 +31,34 @@ These rules apply across every Section. Read before acting.
 ## Execution Procedure
 
 ```
-generate_social_visual(user_request) → design_description + caption + self_check
+generate_social_visual(user_request) → design_description + caption + self_check + image
 
 # Step 0 — Pin hard constraints (MUST, before any decision)
 load references/hard-constraints.md
     → Dimensions table / Safe Zones / Text Overlay Rules / Design Quality Baseline / Banned Words
 keep these in working context for Steps 1, 5, 6 — violation produces fake UI artifacts,
 watermarks, occluded CTAs, or platform-policy breaks.
+preflight = enforce_constraints(format=null, output_text=null, prompt_text=user_request)
+                                              # references/hard-constraints.md
+                                              # pre-flight banned-word scan on the user request
+assert preflight.pass
 
 # Step 1 — Confirm Format and Scenario (lock dimensions first)
-format = resolve_format(user_request)
+format = resolve_format(user_request)         # references/hard-constraints.md §Default Format Selection
     if user specified format → use it
     else apply default scenario logic:
         single image content       → Feed Portrait 4:5
         multi-page knowledge       → Carousel 4:5
         short-lived / ad           → Story 9:16
         short-video cover          → Reel Cover 9:16
-dimensions, ratio, safe_zone = lookup(format, references/hard-constraints.md §Dimensions + §Safe Zones)
+dimensions, ratio, safe_zone = lookup(format) # references/hard-constraints.md
 
 # Step 2 — Identify Industry (auto-load Visual DNA)
-industry = match_industry(user_request, candidates=[Beauty, Fashion, Tech, Lifestyle, Travel, Food, Fitness])
-    if matched     → load references/industry-dna.md → bundle(prompt_patch, composition, color, lighting, common_errors)
-    if no match    → pick closest industry as base + adjust per user request
+industry_bundle = load_industry_dna(user_request)
+                                              # references/industry-dna.md
+                                              # returns {prompt_patch, composition, color,
+                                              # lighting, common_errors, ig_references}
+                                              # on no_match → closest industry as base + adjust
 
 # Step 3 — Define Engagement Goal
 goal = SHARE | SAVE | COMMENT
@@ -67,9 +73,9 @@ hook_type = Bold Claim | Curiosity Gap | Visual Shock
     drives Slide-1 design (Carousel) or headline strategy (single image)
 
 # Step 5 — Composition + Color (Industry × Format cross-decision)
-composition = industry.composition + format.safe_zone constraints
-color       = brand_color (if exists, overrides) or industry.color
-lighting    = industry.lighting
+composition = industry_bundle.composition + safe_zone constraints
+color       = brand_color (if exists, overrides) or industry_bundle.color
+lighting    = industry_bundle.lighting
 text        = format.text_overlay_rule (references/hard-constraints.md §Text Overlay)
 if format == Carousel:
     slides = build_carousel(content, hook_type, industry_bundle, brand_color, goal)
@@ -79,8 +85,10 @@ if format == Carousel:
 audited_output = run_workflow(user_request)
                                               # references/workflow-and-self-check.md
                                               # runs Section 2 steps + Section 4 14-item audit
-                                              # + re-validates against references/hard-constraints.md
-                                              # (sizing, safe zone, overlay, quality, banned words)
+findings = enforce_constraints(format, audited_output.output_text, audited_output.prompt_text)
+                                              # references/hard-constraints.md
+                                              # re-validates sizing, safe zone, overlay, quality, banned words
+assert findings.pass
     if any item fails → revise prompt, regenerate
     if all pass       → emit self_check score block
 
@@ -88,12 +96,17 @@ audited_output = run_workflow(user_request)
 on user satisfied → offer style variants / cross-platform adaptation / Carousel expansion / caption (if absent)
 on user request   → adjust color / composition / style / format / hook (supports local edit, no full regen)
 
-# Output assembly
+# Output assembly + dispatch image generation
 grid_strategy, caption = finalize_grid_and_caption(format, user_caption, brand_account_context)
                                               # references/grid-and-caption.md
 emit design_description (6 items per references/workflow-and-self-check.md §Section 6)
 emit caption — separate text block, never rendered into image
 emit self_check_score (7-line block)
+
+image = Skill("product-shots-image-gen",
+              f"generate: {rendered_prompt} | format={format} | aspect={ratio}")
+# Do NOT substitute with direct API call.
+assert image.delivered
 ```
 
 ## TOC of Module Files

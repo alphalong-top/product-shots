@@ -41,7 +41,7 @@ load references/consistency-rules.md
        / Consistent Appearance / Unified Style)
 keep these in working context for Steps 2-4 — main image violations cause Amazon delisting.
 
-# Step 1 — Determine output scope (Adaptive Workflow)
+# Step 1 — Determine output scope (Adaptive Workflow) + resolve specs
 match user_request:
     if user said "完整套图" / "全套" / "complete set" / "full carousel"      → scope = PRODUCT_IMAGES   (7 images)
     if user said "产品图" / "product images" / "carousel images"             → scope = PRODUCT_IMAGES   (7 images)
@@ -49,6 +49,10 @@ match user_request:
     if user said "A+" / "详情页 A+" / "Brand Content"                        → HANDOFF to `product-shots-detail-page` skill
     else                                                                     → scope = MAIN_FIRST_THEN_ASK
         # generate main image, then ask about secondary type needs
+
+category = match_category(user_request)           # electronics / apparel / home_goods / beauty / food
+specs = get_specs("main")                         # → {min, recommended, aspect, format, color} per references/image-specifications.md
+size, ratio = specs.recommended, specs.aspect     # canonical 1024×1024 / 1:1
 
 # Step 2 — Generate main image (visual baseline)
 load references/image-specifications.md §Main Image
@@ -59,25 +63,31 @@ prompt = compose_main_image_prompt(
     composition = "Product centered, filling ≥85% of frame",
     lighting = "Even, professional studio lighting",
     prohibited = "No text, no logos, no watermarks, no decorative elements",
-    apparel_special = (if apparel) "Real model standing pose OR flat lay; NO mannequin"
+    apparel_special = (if category == apparel) "Real model standing pose OR flat lay; NO mannequin"
 )
-main_image_url = generate(prompt, size="1024x1024", ratio="1:1")
+main_image = Skill("product-shots-image-gen",
+                   f"generate: {prompt} | size={size} | aspect={ratio}")
+# Do NOT substitute with a direct API call. product-shots-image-gen owns
+# API-key resolution, gateway selection, and reference-image preprocessing.
+assert main_image.delivered    # output gate
+main_image_url = main_image.url
 
 # Step 3 — Generate secondary images (if scope ⊇ PRODUCT_IMAGES)
 load references/secondary-images.md
-category = match_category(user_request)  # electronics / apparel / home / beauty / food
-secondary_types = category_to_secondary_types(category)   # see references/secondary-images.md §Category Mapping
-for type in secondary_types:
-    prompt = compose_secondary_prompt(
-        type,
-        reference_image = main_image_url,    # consistency anchor
-        consistency_clause = "Match product color, material, and details from reference image exactly"
-    )
-    image = generate(prompt, image_url_list=[main_image_url], size="1024x1024", ratio="1:1")
+secondary_plan = plan_secondary_images(category, main_image_url)
+    # → image_specs[]; internally calls match_category / category_to_secondary_types /
+    #   compose_secondary_prompt per references/secondary-images.md
+for spec in secondary_plan:
+    image = Skill("product-shots-image-gen",
+                  f"generate: {spec.prompt} | size={spec.size} | aspect={spec.aspect} "
+                  f"| reference_image={main_image_url}")
+    # Do NOT substitute with a direct API call. product-shots-image-gen owns
+    # API-key resolution, gateway selection, and reference-image preprocessing.
+    assert image.delivered    # output gate
 
 # Step 4 — Self-check gate (re-validate against hard-constraints)
-audit(main_image)      → re-validate against references/hard-constraints.md <main_image_rules>
-audit(secondary)       → re-validate consistency anchor + 30pt text floor
+enforce_main_image_rules(main_image)   # re-validate against references/hard-constraints.md <main_image_rules>
+enforce_consistency(secondary_set)     # re-validate Rule 1-4 (anchor + clause + unified style) + 30pt text floor
     if any FAIL → revise prompt, regenerate
 
 # Step 5 — User alignment + iteration

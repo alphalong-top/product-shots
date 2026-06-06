@@ -19,7 +19,7 @@ text_density = OBJECTIVE_RULES[ad_objective].text_density
 
 # Step 6 — Check 10
 if ad_objective == "promotion_conversion":
-    assert run_promotion_validation(creative)   # 4 mandatory rules below
+    assert validate_promotion_ad(creative, ad_objective)   # 4 mandatory rules below
 elif ad_objective == "brand_awareness":
     assert has_prominent_brand_element(creative)
 elif ad_objective == "lead_generation":

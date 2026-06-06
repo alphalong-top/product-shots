@@ -31,9 +31,9 @@ These rules apply across every Section. Read before acting.
 
 ```
 generate_ad_creative(user_request) → variant[] + self_check
-# Equivalent to run_workflow(brief) in references/workflow-and-self-check.md;
-# this EP IS the inlined procedural backbone — references' EP entry points are
-# called step-by-step below.
+# This EP IS the inlined procedural backbone. Each Step calls the EP entry point
+# of its corresponding reference module — bindings below are bidirectional (every
+# call has a matching `def` in references/*.md).
 
 # Step 0 — Pin hard constraints (MUST, before any decision)
 load references/hard-constraints.md
@@ -45,7 +45,7 @@ defer enforcement to Step 6 — `enforce_constraints(format, output_text, prompt
 will be called there with the four params built up over Steps 1–5.
 
 # Step 1 — Platform + Objective (Quick Start: 7 required fields)
-preflight(user_request)  # see references/quick-start-and-fidelity.md
+brief_state = preflight(user_request)  # references/quick-start-and-fidelity.md
 collect 7_required_fields:
     platform, format, ad_objective, industry,
     visual_assets, brand_kit, copy (brand_name / slogan / cta / price)
@@ -55,38 +55,54 @@ if missing:
     # `Skill("product-shots", "fill missing fields: <list>")` — the hub/router skill owns Quick Start clarification.
     # ad-creative owns the post-fill workflow. Do not substitute with manual clarification questions.
     assert filled.delivered          # Step 2 requires the filled brief
-    user_brief = filled.brief
+    brief = filled.brief
+else:
+    brief = brief_state.ready_brief
+for phrase in [brief.copy.brand_name, brief.copy.slogan, brief.copy.cta, brief.copy.price]:
+    if phrase: register_protected_phrase(phrase)   # references/banned-words.md
+
+# run_workflow(brief) is the canonical procedural backbone. Steps 2–6 below
+# unfold it inline so the EP stays readable; each named call matches a `def`
+# entry in the corresponding reference module.
+result = run_workflow(brief)   # references/workflow-and-self-check.md
 
 # Step 2 — Industry + Brand
 industry = match_industry(user_request)
-    → load_industry_bundle(industry)  # references/industry-style-rules.md
-                                      # (color palette / composition / typography / CTA tone / forbidden)
-brand_kit = user_brief.brand_kit          # file path or inline fields
-if brand_kit:
-    kit = parse_brand_kit(brand_kit)       # extract brand_colors / brand_fonts / brand_logo
-    apply_brand_kit_overrides(industry_bundle, kit):
+bundle   = load_industry_bundle(industry)   # references/industry-style-rules.md
+                                            # (color palette / composition / typography / CTA tone / forbidden)
+if brief.brand_kit:
+    kit = parse_brand_kit(brief.brand_kit)    # references/industry-style-rules.md
+    apply_brand_kit_overrides(bundle, kit):
         • brand colors  → primary palette  (overrides industry defaults)
         • brand fonts   → headlines
         • brand logo    → composed per platform safe-zone rules
 
 # Step 3 — Visual Asset Audit
 "Available assets determine the creative ceiling."
-classify visual_assets ∈ {product_photo, model_photo, logo_only, none}
-    → drives composition pattern selection in Step 4
+classified_assets = classify(brief.visual_assets)   # references/composition-patterns.md
+    # ∈ {has_product_photo, has_model_photo, has_logo_only, has_none, ...}
+    # drives composition pattern selection in Step 4
 
 # Step 4 — Composition + Color (Industry × Objective cross-decision)
-composition = select_composition_pattern(industry, ad_objective, visual_assets)
+composition    = select_composition_pattern(industry, ad_objective, classified_assets)
     # references/composition-patterns.md (12 patterns)
+color_strategy = pick_color_strategy(industry, brief.brand_kit)
+    # references/color-and-cta-strategy.md §Color Strategy
+cta_strategy   = pick_cta_strategy(ad_objective, platform)
+    # references/color-and-cta-strategy.md §CTA Strategy
 apply_objective_rules(creative, ad_objective)
     # references/ad-objective-rules.md — info hierarchy / cta_intensity / text_density
-validate_color_scheme(color_palette, industry)
-    # references/color-and-cta-strategy.md §Color Strategy
+validate_color_scheme(color_strategy.primary, industry)
+    # references/color-and-cta-strategy.md / industry-style-rules.md
 
 # Step 5 — Platform Adaptation Layer (inject platform-specific differences)
-for each target_platform in user.platforms:
+for each target_platform in brief.platforms:
     apply_platform_profile(prompt, target_platform)
         # references/platform-style-profiles.md (tone / production / text style / cadence)
-multi_platform_fanout(brief, user.platforms)
+    prompt = sanitize_prompt(prompt, protected_phrases)
+        # references/banned-words.md — filter banned words, restore user copy,
+        # inject Required Positive Instruction (Preserve Native Packaging Text)
+multi_platform_fanout(brief, brief.platforms)
     # references/multi-platform-output.md (per-platform output + cross-format consistency)
 # Section 16 — fill any deferred field with DEFAULTS
 for field in required_fields:
@@ -95,11 +111,11 @@ for field in required_fields:
 
 # Step 6 — Self-Check Gate (mandatory) — Quality Check Before Delivery
 for each variant:
-    result = enforce_constraints(format, output_text, prompt_text, user_copy)
+    findings = enforce_constraints(format, output_text, prompt_text, user_copy)
         # references/hard-constraints.md — re-validates dimensions / safe zones /
         # text overlay / char limits / banned words / Required Positive Instruction /
         # Brand Name & User Copy Fidelity (user_copy preserved verbatim)
-    if result.findings:
+    if findings:
         revise prompt and regenerate
         continue
     apply_objective_rules(variant, ad_objective)         # Check 10 promotion validation
@@ -107,11 +123,14 @@ for each variant:
     validate_color_scheme(dominant_colors, industry)     # Check 6 industry forbidden colors
     if all pass → emit variant
 
-# Output assembly
-emit variant[] per references/failures-defaults-output.md §Section 17 VARIANT_OUTPUT_SCHEMA
-emit self_check_score block
+# Output assembly — variant[] + self_check_score block per
+# references/failures-defaults-output.md §Section 17 VARIANT_OUTPUT_SCHEMA.
+emit variant[] + self_check_score
 on user request → iterate
-on user satisfied → render via the product-shots `product-shots-image-gen` engine
+on user satisfied:
+    Run: `Skill("product-shots-image-gen", f"render variants: {variant[].prompt}")`
+    Do not substitute with manual image-generation prompts or direct model calls.
+    Record output — final delivery to the user requires the rendered images.
 ```
 
 ## TOC of Module Files

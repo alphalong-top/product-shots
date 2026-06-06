@@ -43,6 +43,48 @@ lookup_caller_defaults(caller_skill: str, surface: str) → flag_dict
 # Recommended invocation flags per skills caller / surface combination.
 # Returns a dict of flag → value that can be passed straight to generate.py.
 # See "Family-Specific Defaults" table below.
+# Called by SKILL.md Execution Procedure Step 0a, immediately after validate_args,
+# to fill caller-context defaults before family routing.
+```
+
+```
+generate_image(prompt, model, [aspect_ratio], [negative_prompt],
+               [reference_images], [output_path]) → file_path
+
+# Implemented in scripts/generate.py (main() + generate_openai() / generate_gemini()).
+# Top-level entry function for the skill. Covers Step 0 → Step 6 in SKILL.md EP.
+# Returns the absolute path of the saved image on disk (PNG for OpenAI family,
+# JPEG for Gemini family). Caller treats this path as the canonical artifact.
+```
+
+```
+load_api_key() → (api_key: str, source_label: str)
+
+# Implemented in scripts/generate.py:load_api_key().
+# Resolution order: see "API Key + Base URL" section below.
+# source_label is the human-readable origin (e.g., "OMNIMAAS_API_KEY env",
+# "~/.product_shots_imagegen_api_key file") used for non-secret logging.
+# Exits with a clear message if no key resolves.
+```
+
+```
+load_base_url() → (base_url: str, source_label: str)
+
+# Implemented in scripts/generate.py:load_base_url().
+# Resolution order: see "API Key + Base URL" section below.
+# Defaults to https://api.omnimaas.com/v1 when OMNIMAAS_API_KEY is the
+# resolved auth source and no explicit base URL env var is set.
+```
+
+```
+compose_prompt(prompt: str, negative_prompt: str, aspect_ratio: str, family: str) → str
+
+# Implemented in scripts/generate.py:compose_prompt().
+# Gemini: appends "(aspect ratio: X:Y)" + "Avoid: <negative>" to the prompt
+#         (chat-completions has no size field, so ratio rides in the text).
+# OpenAI: appends only "Avoid: <negative>" (aspect ratio is routed through the
+#         pixel `size` param in Step 3 via OPENAI_SIZE_BY_RATIO).
+# Returns the effective prompt string sent to the upstream endpoint.
 ```
 
 ## CLI Flags

@@ -10,6 +10,14 @@ description: Section 10 (Composition Patterns — Shared Pattern Library, 12 pat
 ## Execution Procedure
 
 ```
+def classify(visual_assets) → classified_assets
+    # Inspect the brief.visual_assets payload and derive the boolean asset signals
+    # consumed by select_composition_pattern's decision tree:
+    #   has_product_photo / has_person_photo / has_logo_only / has_any_photo
+    #   has_discount / is_app_or_software / product_count
+    # Falls back to has_none=True when the user supplied nothing.
+    # Returns a structured object the rest of Step 4 can read directly.
+
 select_composition_pattern(industry, ad_objective, visual_assets) → pattern
 
 # Decision tree priority (first match wins):

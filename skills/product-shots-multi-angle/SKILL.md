@@ -44,15 +44,20 @@ load references/hard-constraints.md
 keep these in working context for Steps 1-4 — violations break identity / hairstyle /
 crop integrity which the validation views (Image 4 back, Image 8 side) cannot recover.
 
-# Step 1 — Reference image gate
+# Step 1 — Reference image gate + constraint pre-check
 if user did NOT upload REFERENCE_IMAGE:
     abort with: "This skill requires a reference image to guarantee identity consistency.
                  Please upload a photo and retry."
     # NEVER fall back to text-only description.
+# Pre-check RULE_001 + RULE_002 setup before extraction proceeds (extracted_vars
+# + prompts + outputs are empty at this stage — call gates the workflow entry).
+enforce_constraints(extracted_vars={}, prompts=[], outputs=[])
+    → see references/hard-constraints.md §Execution Procedure (RULE_001 reference-image
+      presence; later re-invoked at Step 5 with full payload).
 
 # Step 2 — Extract 14 variables from reference (Vision pass)
-extracted = extract_variables(REFERENCE_IMAGE)
-    → see references/variables-and-workflow.md §Variables (14 fields, extraction specs)
+extracted_vars = extract_variables(reference_image=REFERENCE_IMAGE)
+    → see references/variables-and-workflow.md §Variable Extraction Specifications
     REQUIRED   = REFERENCE_IMAGE, HAIR_COLOR, HAIRSTYLE, SKIN_TONE, EYE_COLOR,
                  FACE_SHAPE, OUTFIT, BACKGROUND_COLOR, PHOTOGRAPHY_STYLE, ASPECT_RATIO
     OPTIONAL   = HAIR_ACCESSORIES, BAG, JEWELRY, OTHER_ACCESSORIES (default "none")
@@ -60,24 +65,40 @@ extracted = extract_variables(REFERENCE_IMAGE)
     (do NOT silently default).
 
 # Step 3 — Photography style selection
-if has_explicit_style_specification(user_request)  → use it
-elif has_style_reference_image(context)            → derive from that image
-else:
-    PAUSE — emit the 3 preset images + 5 <suggestion> chips
-    (see references/photography-style-presets.md §Selection Output)
+# Inference sources (per variables-and-workflow.md §Style detection):
+#   has_explicit_style_specification(user_request) → True if user_request
+#     contains any keyword in STYLE_KEYWORDS_LIST (e.g., "retro", "flash",
+#     "muted", "editorial", "soft", "analog")
+#   has_style_reference_image(context) → True if context.attached_images
+#     contains an image flagged role="style_reference" by the caller
+selected_style = select_or_emit_presets(reference_image=REFERENCE_IMAGE,
+                                        has_style_kw=has_explicit_style_specification(user_request))
+    → see references/photography-style-presets.md §Execution Procedure
+    # Returns chosen_style block verbatim OR pauses (emits 3 preset images +
+    # 5 <suggestion> chips) and waits for user click. Never auto-picks a default.
 
 # Step 4 — Fill 9 task-prompt templates (single batch)
-for image_id in 1..9:
-    prompt = task_template[image_id]
-                .format(**extracted, PHOTOGRAPHY_STYLE=chosen_style)
+image_ids = [1, 2, 3, 4, 5, 6, 7, 8, 9]
+prompts = fill_task_prompts(extracted_vars=extracted_vars,
+                            selected_style=selected_style,
+                            image_ids=image_ids)
+    → see references/task-prompts.md §Execution Procedure
+      + references/task-prompts-6-9.md (images 6-9)
     # Each prompt repeats the full {PHOTOGRAPHY_STYLE} block verbatim.
     # Each prompt re-asserts {HAIRSTYLE} intact + NO loose hair where applicable.
-batch_generate(prompts, reference_image=REFERENCE_IMAGE)
+
+images = Skill("product-shots-image-gen",
+               f"batch_generate: {len(prompts)} prompts | "
+               f"reference_image={REFERENCE_IMAGE} | "
+               f"model=gemini-3-pro-image-preview")
+# Do NOT substitute with direct API call. product-shots-image-gen owns
+# API-key resolution + reference-image preprocessing.
+assert images.delivered and len(images) == 9
 
 # Step 5 — Self-check gate (re-validate against hard-constraints)
-for each rule in references/hard-constraints.md §Rules:
-    assert rule holds across all 9 outputs
-critical checks:
+enforce_constraints(extracted_vars=extracted_vars, prompts=prompts, outputs=images)
+    → see references/hard-constraints.md §Execution Procedure (full 8-rule sweep)
+critical checks (subset of RULE_003 / RULE_005 / RULE_006):
     - Image 4 (back view) — hairstyle structure visible from behind, no loose hair
     - Image 8 (side profile) — hairstyle structure visible from side, no loose hair
     - Image 5 (extreme close-up) — only eyes/nose/lips visible, no forehead/chin/shoulders
@@ -86,11 +107,13 @@ if any check fails → regenerate the affected image(s)
 
 # Step 6 — User overrides (re-render selectively)
 on user override of any extracted variable:
-    → see references/variables-and-workflow.md §Variable Override Logic
-    HAIRSTYLE / HAIR_COLOR / HAIR_ACCESSORIES → re-render images 1-9
-    OUTFIT                                     → re-render 1, 2, 3, 4, 6, 7, 8, 9 (skip 5)
-    BAG / JEWELRY                              → re-render 1, 2, 3, 6, 9 (in-frame ones)
-    PHOTOGRAPHY_STYLE                          → re-render images 1-9
+    extracted_vars = apply_user_overrides(extracted_vars, user_overrides)
+        → see references/variables-and-workflow.md §Variable Override Logic
+        # Internally calls mark_affected_images_for_regeneration(variable_key):
+        HAIRSTYLE / HAIR_COLOR / HAIR_ACCESSORIES → re-render images 1-9
+        OUTFIT                                     → re-render 1, 2, 3, 4, 6, 7, 8, 9 (skip 5)
+        BAG / JEWELRY                              → re-render 1, 2, 3, 6, 9 (in-frame ones)
+        PHOTOGRAPHY_STYLE                          → re-render images 1-9
 ```
 
 ## TOC of Module Files

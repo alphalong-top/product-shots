@@ -112,13 +112,20 @@ base_url, url_source = load_base_url()
     # 4. CANVASFLOW_IMAGEGEN_BASE_URL env var (legacy)
     # 5. https://api.omnimaas.com/v1 (default when OMNIMAAS_API_KEY is set)
 
-# Step 0a — Validate caller arguments
+# Step 0a — Validate caller arguments + fill caller-context defaults
 args = validate_args(args)                       # see references/parameter-spec.md
     # rejects empty prompt, unknown model, invalid aspect_ratio
     # auto-fills size for OpenAI from aspect_ratio
     # warns when Gemini ignores --n / --size
+args = lookup_caller_defaults(caller_skill, surface) | args
+    # caller-skill-specific defaults from parameter-spec.md §Family-Specific Defaults
+    # explicit args win over defaults (dict merge with args on the right)
 
-# Step 1 — Identify model family
+# Step 1 — Resolve model + identify family
+if not model:
+    model = select_default_model(use_case)       # see references/model-selection.md
+        # use_case from caller brief: "photorealistic" / "creative" /
+        # "image-to-image" / "cost-sensitive" / "general" (default)
 family = model_family(model)                     # see references/model-selection.md
     # openai  → {gpt-image-1, gpt-image-2, dall-e-3}
     # gemini  → {gemini-3-pro-image-preview, gemini-3.1-flash-image-preview, ...}

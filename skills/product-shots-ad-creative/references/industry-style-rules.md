@@ -18,7 +18,12 @@ match_industry(user_request) → industry_key
 
 load_industry_bundle(industry) → {colors, composition, typography, cta_tone, forbidden, market_share}
 
-apply_brand_kit_overrides(bundle, brand_kit) → bundle
+def parse_brand_kit(brand_kit) → kit_normalized
+    # Accept a file path or inline {colors, fonts, logo}; return a normalized dict
+    # {brand_colors: [...], brand_fonts: [...], brand_logo: <path|None>}.
+    # Returns None when no brand_kit supplied.
+
+apply_brand_kit_overrides(bundle, kit) → bundle
     # brand colors → primary palette (industry → accent)
     # brand fonts  → headlines (industry → secondary)
     # brand logo   → composed per platform safe-zone rules
@@ -26,7 +31,8 @@ apply_brand_kit_overrides(bundle, brand_kit) → bundle
 # Step 2 — workflow input
 bundle = INDUSTRY_RULES[industry]
 if user.brand_kit:
-    apply_brand_kit_overrides(bundle, user.brand_kit)
+    kit = parse_brand_kit(user.brand_kit)
+    apply_brand_kit_overrides(bundle, kit)
 
 # Step 6 — Self-Check Gate Check 6
 dominant_colors = extract_dominant_colors(creative)
