@@ -78,9 +78,16 @@ secondary_plan = plan_secondary_images(category, main_image_url)
     # → image_specs[]; internally calls match_category / category_to_secondary_types /
     #   compose_secondary_prompt per references/secondary-images.md
 for spec in secondary_plan:
+    use_case = "text-overlay" if spec.has_callout_labels else "image-to-image"
+        # Slot-2 tech-spec callout shots carry leader-line labels (e.g.
+        # "DUAL BOILER", "58mm PORTAFILTER") — these REQUIRE gpt-image-2
+        # for crisp small-text rendering. See product-shots-image-gen/
+        # references/model-selection.md §Decision Tree (text-overlay
+        # branch). Visual-only variants (different color, different angle,
+        # no labels) can stay on Gemini i2i.
     image = Skill("product-shots-image-gen",
                   f"generate: {spec.prompt} | size={spec.size} | aspect={spec.aspect} "
-                  f"| reference_image={main_image_url}")
+                  f"| reference_image={main_image_url} | use_case={use_case}")
     # Do NOT substitute with a direct API call. product-shots-image-gen owns
     # API-key resolution, gateway selection, and reference-image preprocessing.
     assert image.delivered    # output gate

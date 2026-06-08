@@ -124,8 +124,12 @@ args = lookup_caller_defaults(caller_skill, surface) | args
 # Step 1 — Resolve model + identify family
 if not model:
     model = select_default_model(use_case)       # see references/model-selection.md
-        # use_case from caller brief: "photorealistic" / "creative" /
-        # "image-to-image" / "cost-sensitive" / "general" (default)
+        # use_case from caller brief: "text-overlay" / "photorealistic" /
+        # "creative" / "image-to-image" / "cost-sensitive" / "general" (default)
+        # ⚠ "text-overlay" WINS over all others — any caller whose prompt
+        # asks for on-image letters or digits (headlines, labels, CTAs,
+        # price chips, callouts) MUST pass "text-overlay" so the dispatcher
+        # routes to gpt-image-2. Gemini family garbles small text.
 family = model_family(model)                     # see references/model-selection.md
     # openai  → {gpt-image-1, gpt-image-2, dall-e-3}
     # gemini  → {gemini-3-pro-image-preview, gemini-3.1-flash-image-preview, ...}

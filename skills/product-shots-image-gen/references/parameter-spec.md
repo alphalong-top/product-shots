@@ -116,13 +116,16 @@ When called by other product-shots specialists:
 
 | Caller / use case | Recommended flags |
 |---|---|
+| **Any output that must carry on-image text** (headlines / labels / CTAs / price chips / callout annotations) | `--model gpt-image-2` — overrides any default below. Gemini family cannot render small text reliably. See `references/model-selection.md` §Decision Tree (text-overlay branch wins). |
 | `product-shots-main-image` (Amazon main image, single SKU) | `--model gpt-image-2 --aspect-ratio 1:1` |
-| `product-shots-main-image` (secondary image with reference) | `--model gemini-3-pro-image-preview --aspect-ratio 1:1 --reference-image <main.jpg>` |
+| `product-shots-main-image` (secondary as tech-spec callout with labels) | `--model gpt-image-2 --aspect-ratio 1:1 --reference-image <main.jpg>` |
+| `product-shots-main-image` (secondary as pure visual variant, no text) | `--model gemini-3-pro-image-preview --aspect-ratio 1:1 --reference-image <main.jpg>` |
 | `product-shots-detail-page` (A+ Hero Banner 21:9) | `--model gemini-3-pro-image-preview --aspect-ratio 16:9 --reference-image <main.jpg>` |
 | `product-shots-detail-page` (A+ standard module 3:2) | `--model gemini-3-pro-image-preview --aspect-ratio 3:2 --reference-image <main.jpg>` |
 | `product-shots-multi-angle` (9-angle model series) | `--model gemini-3-pro-image-preview --reference-image <model.jpg>` |
-| `product-shots-ad-creative` photoreal | `--model gpt-image-2 --aspect-ratio <platform-specific>` |
-| `product-shots-social-post` (Carousel slide) | `--model gemini-3-pro-image-preview --aspect-ratio 4:5` |
+| `product-shots-ad-creative` (any platform — UGC, Meta, Google) | `--model gpt-image-2 --aspect-ratio <platform-specific> --reference-image <composition-anchor.jpg>` — ad copy text MUST render legibly, so always gpt-image-2. |
+| `product-shots-social-post` (text-bearing — price tag, magazine headline) | `--model gpt-image-2 --aspect-ratio 4:5` |
+| `product-shots-social-post` (purely visual Carousel slide, no on-image text) | `--model gemini-3-pro-image-preview --aspect-ratio 4:5` |
 
 ## API Key + Base URL
 

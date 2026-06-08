@@ -24,12 +24,21 @@ exit 1 with: "Unknown model: <model>. Supported: <union of both sets>"
 ```
 select_default_model(use_case: str = "general") → model_name
 
+"text-overlay"      → "gpt-image-2"      ← any on-image text (headlines, labels,
+                                            CTAs, price chips, callout labels)
 "photorealistic"    → "gpt-image-2"
 "creative"          → "gemini-3-pro-image-preview"
-"image-to-image"    → "gemini-3-pro-image-preview"
+"image-to-image"    → "gemini-3-pro-image-preview"  ← unless text overlay too,
+                                                      then "gpt-image-2"
 "cost-sensitive"    → "gemini-3.1-flash-image-preview"
 "general" (default) → "gemini-3-pro-image-preview"
 ```
+
+**Trigger detection for `"text-overlay"`** — caller (or prompt-keyword scan)
+sees any of: "caption", "headline", "label", "callout", "leader line",
+"price tag/chip", "CTA button", "Shop Now", "$<number>", "watermark text",
+"sticker overlay", "annotation". When in doubt: if the user prompt
+*asks for letters or digits to appear on the image*, use `"text-overlay"`.
 
 ## Family Routing
 
@@ -46,8 +55,8 @@ Other OmniMaaS / Cloubic gateway image models (`qwen-image-edit-plus`, `doubao-s
 
 | Model | Family | Input cost | Output cost | Typical /image | Strength |
 |---|---|---|---|---|---|
-| **`gemini-3-pro-image-preview`** ⭐ | gemini | ¥0.0128/1K | ¥0.7668/1K | **¥1.00** | All-rounder. Nano Banana Pro. Strong photorealism + creative output + native image-to-image. **Default.** |
-| `gpt-image-2` | openai | ¥0.0511/1K | ¥0.1917/1K | ¥0.35 | OpenAI's strongest. Excellent prompt adherence. Multimodal input via Function Calling. Cheaper than Nano Banana Pro per image. |
+| **`gemini-3-pro-image-preview`** ⭐ | gemini | ¥0.0128/1K | ¥0.7668/1K | **¥1.00** | All-rounder. Nano Banana Pro. Strong photorealism + creative output + native image-to-image. **Default for text-free output.** Garbles on-image text — do NOT use for headlines / labels / CTAs. |
+| `gpt-image-2` | openai | ¥0.0511/1K | ¥0.1917/1K | ¥0.35 | OpenAI's strongest. Excellent prompt adherence. **Required for any on-image text** (headlines, callout labels, price chips, CTA buttons) — Gemini family cannot render small text reliably. Multimodal input via Function Calling. Cheaper than Nano Banana Pro per image. |
 | `gemini-3.1-flash-image-preview` | gemini | ¥0.0032/1K | ¥0.3834/1K | ¥0.20 | Nano Banana (non-Pro). Cheapest quality option. Use for high-volume / draft generation. |
 | `gpt-image-1` | openai | ¥0.0319/1K | ¥0.2556/1K | ¥0.50 | Older OpenAI image model. Use only if gpt-image-2 unavailable. |
 | `gemini-2.5-flash-image` / `-preview` | gemini | ¥0.0019/1K | ¥0.1917/1K | ¥0.15 | Older Nano Banana variants. Cheaper but weaker than 3.1 flash. |
@@ -57,6 +66,16 @@ Other OmniMaaS / Cloubic gateway image models (`qwen-image-edit-plus`, `doubao-s
 
 ```
 "What kind of image?"
+├─ Image must render readable on-image text  ⭐ CHECK FIRST
+│  (headlines, captions, labels, callouts, CTAs, price chips, leader-line
+│   annotations, sticker overlays, watermark text)
+│    → gpt-image-2  (clean small-text rendering; Gemini garbles <30pt text)
+│  This rule WINS over any other branch — if the image needs text AND is
+│  also photorealistic / image-to-image / creative, still use gpt-image-2.
+│  For image-to-image text overlays, route via /v1/images/edits with the
+│  caller's reference image; gpt-image-2 preserves composition while
+│  editing in the ad copy.
+│
 ├─ Hyper-photorealistic (product photo, editorial portrait, lifestyle)
 │    → gpt-image-2  (strongest prompt adherence + clean output)
 │
@@ -77,11 +96,12 @@ Other OmniMaaS / Cloubic gateway image models (`qwen-image-edit-plus`, `doubao-s
 
 | Capability | OpenAI | Gemini |
 |---|---|---|
+| On-image text rendering | ✓ crisp at 24pt+ (headlines, CTAs, callout labels) | ✗ garbles small text, mis-spells short words. Acceptable only for very large display text (60pt+) and even then unreliable. **Route any text-bearing request to OpenAI.** |
 | Multiple variations (`n > 1`) | ✓ (one call, n results) | ✗ (one image per call; loop externally) |
 | Explicit pixel sizes | ✓ (`size: "1024x1024"` etc.) | ✗ (aspect ratio embedded in prompt) |
 | Image-to-image | via separate `/v1/images/edits` endpoint (multipart) | same endpoint, reference image as `image_url` content block |
 | Output format | PNG (b64_json) | JPEG (data URL in markdown) |
-| Typical latency | 60-120s | 50-70s |
+| Typical latency | 60-300s (longer for /v1/images/edits with reference + text) | 50-70s |
 | Cost per image (1024-ish) | ¥0.35-0.50 | ¥0.20-1.00 |
 
 ## Future Extensions

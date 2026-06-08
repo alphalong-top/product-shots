@@ -128,9 +128,12 @@ for each variant:
 emit variant[] + self_check_score
 on user request → iterate
 on user satisfied:
-    Run: `Skill("product-shots-image-gen", f"render variants: {variant[].prompt}")`
+    Run: `Skill("product-shots-image-gen", f"render variants: {variant[].prompt} use_case=text-overlay")`
     Do not substitute with manual image-generation prompts or direct model calls.
     Record output — final delivery to the user requires the rendered images.
+    use_case=text-overlay is REQUIRED for ad-creative — ad copy (headlines,
+    CTAs, price chips) MUST render legibly; this routes to gpt-image-2.
+    See product-shots-image-gen/references/model-selection.md.
 ```
 
 ## TOC of Module Files
