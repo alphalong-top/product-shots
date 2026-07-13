@@ -132,8 +132,8 @@ ROUTING_RULES = {
 
 | Target | Trigger summary |
 |---|---|
-| `product-shots-main-image` | Amazon-compliant main product image and the 7 secondary-image types (1:1 carousel) |
-| `product-shots-detail-page` | Amazon A+ Content modules (21:9 Hero Banner + 3:2 standard modules) |
+| `product-shots-main-image` | Amazon main or alternate listing images generated against recorded constraints |
+| `product-shots-detail-page` | Assets for selected Basic/Premium A+ Content Manager templates |
 | `product-shots-multi-angle` | Apparel / accessory model 9-angle consistency series |
 | `product-shots-ad-creative` | Paid promotion / ad creative across IG, FB, TikTok, LinkedIn, Google, YouTube, Pinterest, X |
 | `product-shots-social-post` | Organic social-platform post (Feed / Story / Reel / Carousel) |
@@ -160,7 +160,7 @@ The order of evaluation in `ROUTING_RULES` matters — `product-shots-main-image
 
 ## Common ambiguity resolution
 
-- **"Amazon listing image" — main vs A+?** Carousel (1:1) → `product-shots-main-image`. Below-carousel module imagery (21:9 / 3:2) → `product-shots-detail-page`.
+- **"Amazon listing image" — main vs A+?** Main/gallery image → `product-shots-main-image`. Below-gallery Content Manager template asset → `product-shots-detail-page`.
 - **"Lookbook for my dress" — multi-angle vs social-post?** If the user wants a 9-angle identity-locked model series from one reference → `product-shots-multi-angle`. If the user wants a Carousel social post repurposing existing lookbook images → `product-shots-social-post`.
 - **"Instagram product post with discount tag" — social-post vs ad-creative?** If it's an organic post (no paid campaign objective) → `product-shots-social-post`. If it's tied to a paid campaign (Facebook Ads / Meta Ads Manager / TikTok Ads Manager) → `product-shots-ad-creative`.
 - **"Multi-platform fan-out from one creative" — within ad-creative or another skill?** Single-creative multi-platform fan-out lives inside `product-shots-ad-creative` itself (Step 5: Platform Adaptation Layer). No separate cross-platform adapter is exposed in this ecosystem.

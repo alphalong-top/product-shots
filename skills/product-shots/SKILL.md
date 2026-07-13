@@ -191,8 +191,8 @@ Hub is the **intent router** of the product-shots skill ecosystem. It dispatches
 
 | Downstream skill | Routing condition |
 |---|---|
-| `product-shots-main-image` | E-commerce main / secondary image (1:1 carousel) — non-ad |
-| `product-shots-detail-page` | Amazon A+ Content / 21:9 Hero Banner / 3:2 module |
+| `product-shots-main-image` | Amazon main or alternate listing image — non-ad |
+| `product-shots-detail-page` | Amazon Basic/Premium A+ template asset |
 | `product-shots-multi-angle` | Apparel / accessory model 9-angle consistency series |
 | `product-shots-ad-creative` | `asset_type == 'ad'` OR `is_promotion == True` (across IG, FB, TikTok, LinkedIn, Google, YouTube, Pinterest, X) |
 | `product-shots-social-post` | Organic social post on IG / TikTok / FB / Pinterest / RedNote / LinkedIn / X — non-ad |
@@ -201,7 +201,7 @@ Cross-skill consistency:
 - The 7-industry Visual DNA defined here is **shared** with `product-shots-social-post`, `product-shots-ad-creative`, and downstream business skills.
 - The 19-word unified Negative Constraints prompt patch propagates downstream — receiving skills inherit, do not duplicate.
 - Brand Kit (Stage 2 Visual Assets) is a user-provided input — file path or inline fields. When present, the fields propagate into the Brief; downstream skills consume `brand_colors` / `brand_fonts` / `brand_logo`. Full contract: §Brand Kit Reference below.
-- **Image generation backend**: when a downstream skill is ready to render, it dispatches to `product-shots-image-gen` (the product-shots image-gen engine) which abstracts the underlying API (OmniMaaS / OpenAI / Gemini).
+- **Image generation workflow**: downstream skills use `product-shots-image-gen`. Codex uses built-in image generation by default; external OpenAI/Gemini gateway mode is explicit and optional.
 
 ## Tooling
 

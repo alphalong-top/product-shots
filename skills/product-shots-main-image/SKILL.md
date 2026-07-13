@@ -1,148 +1,74 @@
 ---
 name: product-shots-main-image
-description: 'Designs Amazon-compliant main product images and the 7 secondary image types (Infographic / Multi-angle / Detail Shot / Lifestyle / Variants / What''s in Box / Size Reference) — with platform-mandatory main-image rules, conversion-rate-tuned secondary types per product category, and multi-image consistency anchored to the main image URL. Use when the user says "Amazon main image", "亚马逊主图", "product main image", "white background product image", "Amazon listing image", "亚马逊副图", "secondary images", "product carousel images", or any request for the 1:1 product image suite that lives on the Amazon detail page carousel. For A+ Content / detail-page modules (21:9 Hero Banner and 3:2 module layouts), see the `product-shots-detail-page` skill.'
-license: MIT
-metadata:
-  author: motiful
-  source: product-shots ecosystem
-  skill_id: product_shots_main_image
-  version: "1.0"
+description: Plan, generate, and review Amazon main and alternate listing images from product references. Use for Amazon main images, white-background product images, listing carousels, secondary images, infographics, detail shots, lifestyle images, what's-in-the-box images, and size references. Apply current marketplace and category rules, generate through product-shots-image-gen, run deterministic checks, and describe outputs as generated against constraints rather than guaranteed Amazon-compliant.
 ---
 
-# Main Image
+# Amazon Main And Alternate Images
 
-You are the **Amazon Product Image Design Expert** — main image and secondary images. Design the 1:1 product image suite that appears on the Amazon detail page carousel: a main image that meets Amazon's mandatory rules, plus 4-7 secondary images chosen by product category, with multi-image visual consistency anchored to the main image.
+Create grounded listing images without changing the SKU or implying that an
+unvalidated image is guaranteed to pass Amazon review.
 
-For A+ Content / detail-page modules (Hero Banner 21:9, standard modules 3:2, mobile safe-area), use the **`product-shots-detail-page`** skill — it is the sibling skill that covers the Brand Registered seller's expanded product page below the carousel.
+## Load rules
 
-## Engagement Principles
+Read `references/hard-constraints.md` and
+`references/image-specifications.md` before planning a main image. The bundled
+rules are a US-market snapshot retrieved 2026-07-13. If the user targets
+another marketplace or a regulated/category-specific product, verify that
+market's current Seller Central rules before generation.
 
-These rules apply across every Section. Read before acting.
+Use `references/secondary-images.md` only as design guidance for alternate
+images. Amazon recommends additional images; the suggested slot mix is not a
+mandatory platform template.
 
-1. **Main image rules are MUST-level — load before any generation.** Pure white RGB(255,255,255) background, product fills ≥85% of frame, zero text / logo / watermark / decoration. Violations cause Amazon delisting or review rejection — see `references/hard-constraints.md` `<main_image_rules>`.
-2. **Generate main image first; it is the visual baseline.** All secondary images reference the main image URL as `reference_image_urls` so product color, material, and details stay identical across the suite.
-3. **Adaptive output scope — match user intent to the right deliverable count.** Full carousel = main(1) + secondary(6) = 7 images. Product images only = main(1) + secondary(6) = 7. Main only = 1. Ambiguous = generate main first, then ask about secondary needs.
-4. **Secondary image type selection is product-category-driven.** Electronics → Infographic + Multi-angle + Detail Shot + Size Reference. Apparel → Multi-angle + Detail Shot + Lifestyle + Variants. Home goods / Beauty / Food each have their own canonical 4-type bundles.
-5. **Mobile readability floor: 30pt minimum text size.** Anything smaller is unreadable on phones, defeating the purpose of an infographic.
-6. **Apparel has special rules: real models or flat lay only — no mannequins.** Models must stand. This rule supersedes the general "no people in main image" rule.
-7. **Pair with `product-shots-detail-page` when user wants A+ Content.** If the user mentions "A+", "Brand Content", "Enhanced Brand Content", "详情页 A+", or "21:9 banner", hand off to the `product-shots-detail-page` skill — it owns the 8-module A+ workflow.
+## Workflow
 
-## Execution Procedure
+1. Identify the exact SKU, market, category, variant, package contents, and
+   source-of-truth reference images. Ask only for missing facts that could
+   change what is shown.
+2. Decide scope:
+   - main only: one main image;
+   - listing set: main plus up to six alternate slots by default;
+   - A+ Content: route to `product-shots-detail-page`.
+3. Generate the main image first through `product-shots-image-gen`. In Codex,
+   use its built-in imagegen path. Preserve real scale, quantity, color,
+   product markings, packaging details, and included accessories.
+4. Apply the general main-image constraints plus the exact category rules.
+   Do not generalize adult-clothing rules to accessories, children's products,
+   footwear, multipacks, or other categories.
+5. Inspect the generated main image visually against the source references.
+   Reject product drift, invented controls, altered labels, missing parts,
+   misleading accessories, clipped product edges, and malformed packaging.
+6. Run deterministic checks, selecting the planned ratio rather than assuming
+   every category must be square:
 
-```
-generate_main_and_secondary(user_request) → image_suite + per-image_design_descriptions
+   ```bash
+   python ../product-shots-image-gen/scripts/validate_artifacts.py \
+     --image ./main.jpg --expected-ratio 1:1 --main-image \
+     --report ./validation-main.json
+   ```
 
-# Step 0 — Pin hard constraints (MUST, before any generation)
-load references/hard-constraints.md
-    → <main_image_rules>: 9 mandatory rules (background / ratio / content / lighting / composition
-       / no-text / no-logo / no-decoration / apparel-specific)
-load references/consistency-rules.md
-    → <consistency_rules>: 4 rules (Main Image First / Reference Main Image
-       / Consistent Appearance / Unified Style)
-keep these in working context for Steps 2-4 — main image violations cause Amazon delisting.
+   Border and occupancy results are heuristics. A visual source comparison and
+   Amazon review remain necessary.
+7. Plan alternate slots by customer question and product category. Pass the
+   accepted main image and original product references to every downstream
+   generation. Prefer separate image calls with slot-specific prompts.
+8. Create `manifest.json` using the image-gen manifest specification. For a
+   seven-image set, use slots `main` and `secondary-01` through
+   `secondary-06`; record prompt, references, path, and validation status.
+9. Deliver only complete artifacts. Say "generated against the recorded Amazon
+   constraints" and list any checks that remain manual.
 
-# Step 1 — Determine output scope (Adaptive Workflow) + resolve specs
-match user_request:
-    if user said "完整套图" / "全套" / "complete set" / "full carousel"      → scope = PRODUCT_IMAGES   (7 images)
-    if user said "产品图" / "product images" / "carousel images"             → scope = PRODUCT_IMAGES   (7 images)
-    if user said "主图" / "main image" / "primary image"                     → scope = MAIN_ONLY        (1 image)
-    if user said "A+" / "详情页 A+" / "Brand Content"                        → HANDOFF to `product-shots-detail-page` skill
-    else                                                                     → scope = MAIN_FIRST_THEN_ASK
-        # generate main image, then ask about secondary type needs
+## Review boundaries
 
-category = match_category(user_request)           # electronics / apparel / home_goods / beauty / food
-specs = get_specs("main")                         # → {min, recommended, aspect, format, color} per references/image-specifications.md
-size, ratio = specs.recommended, specs.aspect     # canonical 1024×1024 / 1:1
+Deterministic checks can verify file format, dimensions, aspect ratio, color
+mode, white border sampling, a conservative non-white bounding box, and
+manifest completeness.
 
-# Step 2 — Generate main image (visual baseline)
-load references/image-specifications.md §Main Image
-load references/hard-constraints.md <main_image_rules>
-prompt = compose_main_image_prompt(
-    product = user_request.product_description,
-    background = "Pure white RGB(255,255,255), no gradients or shadows",
-    composition = "Product centered, filling ≥85% of frame",
-    lighting = "Even, professional studio lighting",
-    prohibited = "No text, no logos, no watermarks, no decorative elements",
-    apparel_special = (if category == apparel) "Real model standing pose OR flat lay; NO mannequin"
-)
-main_image = Skill("product-shots-image-gen",
-                   f"generate: {prompt} | size={size} | aspect={ratio}")
-# Do NOT substitute with a direct API call. product-shots-image-gen owns
-# API-key resolution, gateway selection, and reference-image preprocessing.
-assert main_image.delivered    # output gate
-main_image_url = main_image.url
+Always review product identity, included accessories, packaging accuracy,
+category exceptions, claims, product markings, and misleading composition
+manually or with a grounded agent comparison. Do not claim that prompt text
+alone enforces these properties.
 
-# Step 3 — Generate secondary images (if scope ⊇ PRODUCT_IMAGES)
-load references/secondary-images.md
-secondary_plan = plan_secondary_images(category, main_image_url)
-    # → image_specs[]; internally calls match_category / category_to_secondary_types /
-    #   compose_secondary_prompt per references/secondary-images.md
-for spec in secondary_plan:
-    use_case = "text-overlay" if spec.has_callout_labels else "image-to-image"
-        # Slot-2 tech-spec callout shots carry leader-line labels (e.g.
-        # "DUAL BOILER", "58mm PORTAFILTER") — these REQUIRE gpt-image-2
-        # for crisp small-text rendering. See product-shots-image-gen/
-        # references/model-selection.md §Decision Tree (text-overlay
-        # branch). Visual-only variants (different color, different angle,
-        # no labels) can stay on Gemini i2i.
-    image = Skill("product-shots-image-gen",
-                  f"generate: {spec.prompt} | size={spec.size} | aspect={spec.aspect} "
-                  f"| reference_image={main_image_url} | use_case={use_case}")
-    # Do NOT substitute with a direct API call. product-shots-image-gen owns
-    # API-key resolution, gateway selection, and reference-image preprocessing.
-    assert image.delivered    # output gate
-
-# Step 4 — Self-check gate (re-validate against hard-constraints)
-enforce_main_image_rules(main_image)   # re-validate against references/hard-constraints.md <main_image_rules>
-enforce_consistency(secondary_set)     # re-validate Rule 1-4 (anchor + clause + unified style) + 30pt text floor
-    if any FAIL → revise prompt, regenerate
-
-# Step 5 — User alignment + iteration
-on user feedback        → adjust prompts, regenerate affected images only (preserve consistency anchor)
-on user satisfied       → offer extension (additional secondary types / handoff to `product-shots-detail-page` for A+)
-```
-
-## TOC of Module Files
-
-- `references/hard-constraints.md` — Main Image Guidelines (Mandatory Requirements): `<main_image_rules>` XML block with Must Comply, Absolutely Prohibited, Apparel Specific Rules. MUST-level. Loaded at EP Step 0 and re-validated at the Self-Check Gate.
-- `references/image-specifications.md` — Image Specifications for main image and secondary images: dimensions (1:1 / 1024×1024), aspect ratios, file format, color space, mobile-readability text floor, per-type technical parameters.
-- `references/secondary-images.md` — Secondary Image Types and Uses (7 types) + Secondary Image Design Principles (General Principles + Infographic Design Essentials) + product-category → secondary-type mapping.
-- `references/consistency-rules.md` — Multi-Image Generation Consistency Rules: `<consistency_rules>` XML block (4 rules) + Conversion Rate Reference Data (5 benchmarks).
-
-## Section Index
-
-```
-Applicable Scenarios                                    → SKILL.md (intro paragraph + EP Step 1 scope rules)
-Core Deliverables                                       → SKILL.md (Engagement Principles 3-4)
-Adaptive Workflow                                       → SKILL.md §Execution Procedure Step 1
-Image Specifications (main + secondary)                → references/image-specifications.md
-Main Image Guidelines (Mandatory Requirements)         → references/hard-constraints.md
-  Must Comply
-  Absolutely Prohibited
-  Apparel Specific Rules
-Secondary Image Types and Uses                          → references/secondary-images.md §Types
-  Infographic / Multi-angle / Detail Shot / Lifestyle
-  Variants / What's in Box / Size Reference
-Secondary Image Design Principles                       → references/secondary-images.md §Principles
-  General Principles
-  Infographic Design Essentials
-Conversion Rate Reference Data                          → references/consistency-rules.md §Conversion Data
-Multi-Image Generation Consistency Rules                → references/consistency-rules.md §<consistency_rules>
-User Alignment Guidance                                 → SKILL.md §Execution Procedure Step 5
-Iteration and Optimization Tips                         → SKILL.md §Execution Procedure Step 5
-```
-
-## Persona
-
-`Amazon Product Image Design Expert (Main + Secondary)` — domain expert in Amazon listing-image compliance, e-commerce conversion-rate optimization, and multi-image visual consistency.
-
-## Cross-Skill Notes
-
-- **Sibling skill `product-shots-detail-page`** owns the A+ Content workflow (Hero Banner 21:9, 6 standard 3:2 modules, mobile safe-area rule). When the user asks for "A+", "Brand Content", "详情页", or any 21:9 / 3:2 module, route there. The two skills share `consistency-rules.md` as a common reference because every A+ module also anchors on the main image URL produced here.
-- **Sibling skill `product-shots-multi-angle`** is for apparel/footwear 9-angle model series (single reference photo → 9 identity-locked portraits) — distinct from this skill's secondary-image "Multi-angle" type (which is product, not model).
-- **Sibling skills `product-shots-ad-creative` / `product-shots-social-post`** are downstream — they can consume the main image URL produced here as an asset for ad creatives and social-media posts.
-- **Image generation backend**: prompts produced here are dispatched to `product-shots-image-gen` (the product-shots image-gen engine) which abstracts the underlying API (OmniMaaS / OpenAI / Gemini).
-
-## Tooling
-
-The skill produces prompts and consistency anchors. Image generation is invoked by the parent agent or `product-shots-image-gen` engine using the prompts produced here — pseudocode `generate(prompt, image_url_list?, size, ratio) → image_url` references whichever image-to-image–capable backend the platform exposes.
+AI-generated main images may be unacceptable where Amazon requires a photo of
+the actual product. Surface that risk instead of presenting an AI render as an
+automatically upload-ready photograph.

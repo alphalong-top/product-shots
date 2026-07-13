@@ -7,7 +7,6 @@ metadata:
   source: product-shots ecosystem
   skill_id: product_shots_multi_angle
   version: "1.0"
-persona: fashion editorial director specializing in multi-image model campaigns
 ---
 
 # Multi-Angle
@@ -88,11 +87,10 @@ prompts = fill_task_prompts(extracted_vars=extracted_vars,
     # Each prompt re-asserts {HAIRSTYLE} intact + NO loose hair where applicable.
 
 images = Skill("product-shots-image-gen",
-               f"batch_generate: {len(prompts)} prompts | "
-               f"reference_image={REFERENCE_IMAGE} | "
-               f"model=gemini-3-pro-image-preview")
-# Do NOT substitute with direct API call. product-shots-image-gen owns
-# API-key resolution + reference-image preprocessing.
+               f"generate_one_per_prompt: {len(prompts)} prompts | "
+               f"reference_image={REFERENCE_IMAGE}")
+# In Codex, product-shots-image-gen uses built-in image generation by default.
+# External provider/model selection is explicit optional API mode.
 assert images.delivered and len(images) == 9
 
 # Step 5 — Self-check gate (re-validate against hard-constraints)

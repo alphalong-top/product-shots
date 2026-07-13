@@ -58,14 +58,14 @@ E-commerce platforms always shown (Amazon, Shopify, AliExpress, TikTok Shop, Ind
 
 | Field | Value |
 |---|---|
-| Main image format | `square` (1024×1024, 1:1) |
-| Secondary image format | `square` (1024×1024, 1:1) |
-| A+ Hero Banner | `wide_banner` (2388×1024, 21:9) |
-| A+ Standard module | `landscape_module` (1536×1024, 3:2) |
+| Main image format | Category-aware; square is a common general default, adult clothing guidance is close to 3:4 |
+| Alternate image format | Intentional set canvas; not universally required to be square |
+| Basic A+ | Select a Content Manager template and use its displayed image-box dimensions |
+| Premium A+ | Select a Content Manager template and use its displayed image-box dimensions |
 | `core_vibe` | Clean, evidence-based, conversion-optimized |
-| `composition` | Centered subject, ≥85% frame fill (main image), pure white RGB(255,255,255) background |
-| `prompt_patches` | `studio product photography, pure white background, even soft lighting, e-commerce listing aesthetic` |
-| Routing | `product-shots-main-image` (1:1 carousel) / `product-shots-detail-page` (21:9 + 3:2 A+ modules) |
+| `composition` | Main image: full product, 85% occupancy target, pure white RGB(255,255,255) background, plus category rules |
+| `prompt_patches` | `grounded professional product image, accurate scale quantity and color, preserve all SKU details` |
+| Routing | `product-shots-main-image` (main/gallery) / `product-shots-detail-page` (A+ template assets) |
 
 ## Shopify / Independent Site (e-commerce)
 

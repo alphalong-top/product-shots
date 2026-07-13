@@ -182,7 +182,7 @@ This is the front-end rendering instruction — option sets are wrapped in `<sug
 - **Upstream router**: `product-shots` routes here for the organic-social branch when `asset_type ∈ {post, carousel, feed, story, reel}` AND `is_promotion != True`. Promotional / ad creative requests route to `product-shots-ad-creative` instead.
 - **Industry Visual DNA presets** (seven industries) are shared with `product-shots` and `product-shots-ad-creative` (cross-skill consistency).
 - **Sibling skills**: `product-shots-main-image` / `product-shots-detail-page` (Amazon product/detail page imagery) — can produce source assets that get repurposed for social posts; `product-shots-multi-angle` (model 9-angle series) — produces fashion lookbook content that can be reframed for social Carousel. `product-shots-ad-creative` handles paid promotion / ad-objective creative with platform takedown-risk rules.
-- **Image generation backend**: rendered prompts are dispatched to `product-shots-image-gen` (the product-shots image-gen engine) which abstracts the underlying API (OmniMaaS / OpenAI / Gemini).
+- **Image generation workflow**: dispatch rendered briefs to `product-shots-image-gen`. Codex uses built-in image generation by default; external gateway mode is explicit and optional.
 
 ## Tooling
 

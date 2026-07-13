@@ -131,9 +131,9 @@ on user satisfied:
     Run: `Skill("product-shots-image-gen", f"render variants: {variant[].prompt} use_case=text-overlay")`
     Do not substitute with manual image-generation prompts or direct model calls.
     Record output — final delivery to the user requires the rendered images.
-    use_case=text-overlay is REQUIRED for ad-creative — ad copy (headlines,
-    CTAs, price chips) MUST render legibly; this routes to gpt-image-2.
-    See product-shots-image-gen/references/model-selection.md.
+    Treat exact ad copy as an output invariant. Use the default built-in
+    product-shots-image-gen path in Codex, inspect every rendered word, and
+    regenerate or add text deterministically when generated copy is malformed.
 ```
 
 ## TOC of Module Files
@@ -225,8 +225,8 @@ This is the front-end rendering instruction — option sets are wrapped in `<sug
 - **Quick Start dependency**: when any of the 7 required fields is missing, this skill defers to `product-shots` for clarification (`"If any of these are missing, use hub first."`). This is **conditional pre-fill**, not a hand-off — once fields are filled, control returns here.
 - **Brand Kit**: when the user provides a Brand Kit (file path or inline colors / fonts / logo), Step 2 integrates it as hard constraints. Brand Kit overrides industry-default colors and is a cross-skill consistency anchor shared with all peer product-shots skills.
 - **Industry Visual DNA** is shared with `product-shots-social-post` and `product-shots` (cross-skill consistency).
-- **Image generation backend**: rendered prompts are dispatched to `product-shots-image-gen` (the product-shots image-gen engine) which abstracts the underlying API (OmniMaaS / OpenAI / Gemini).
-- **Adjacent boundary skills** (peers, not invoked from inside `product-shots-ad-creative`): `product-shots-social-post` (organic social content, no ad-objective layer), `product-shots-main-image` (Amazon-compliant product main image), `product-shots-detail-page` (Amazon A+ Content), `product-shots-multi-angle` (model-consistency portrait series).
+- **Image generation workflow**: dispatch rendered briefs to `product-shots-image-gen`. Codex uses built-in image generation by default; external gateway mode is explicit and optional.
+- **Adjacent boundary skills** (peers, not invoked from inside `product-shots-ad-creative`): `product-shots-social-post` (organic social content, no ad-objective layer), `product-shots-main-image` (Amazon listing images generated against recorded constraints), `product-shots-detail-page` (Amazon A+ Content), `product-shots-multi-angle` (model-consistency portrait series).
 
 ## Tooling
 

@@ -33,7 +33,7 @@
 
 <br>
 
-> Drop one photo of your SKU into Claude Code. Get back the full visual stack a cross-border listing needs — Amazon-compliant main images, A+ detail-page modules, a 9-angle fashion-on-model lookbook, platform-native ads, and social posts. All as open-source [Agent Skills](https://agentskills.io), no SaaS lock-in.
+> Drop grounded SKU references into Codex or another compatible agent. Build Amazon listing images, A+ assets, advertising creatives, and social content with saved prompts, manifests, and deterministic file checks. Marketplace acceptance still requires category-aware review.
 
 ---
 
@@ -45,9 +45,9 @@
 
 Real outputs from the five user-facing `product-shots-*` skills. Two products, one section per skill, two examples per skill, two-or-more images per example. Generated end-to-end via `product-shots-image-gen` against the OmniMaaS gateway (`gemini-3-pro-image-preview`). No manual prompt tuning beyond what the skill emits.
 
-### `product-shots-main-image` — Amazon-compliant main + secondary
+### `product-shots-main-image` — Amazon main + alternate images
 
-> Marketplace-compliant main image (pure white, ≥85% frame fill, no overlay text) + a secondary detail shot. Amazon's 9 MUST rules are encoded as prompt fields, not patched post-render.
+> Historical outputs generated against a white-background and product-occupancy brief. Gallery files demonstrate output quality, not Amazon acceptance or current-policy compliance.
 
 <table>
 <tr>
@@ -84,7 +84,7 @@ Real outputs from the five user-facing `product-shots-*` skills. Two products, o
 <td><img src="assets/gallery/dress/detail-page/02-lifestyle-feature.jpeg" width="200"></td>
 </tr>
 <tr>
-<td align="center"><sub>Hero band, 21:9</sub></td>
+<td align="center"><sub>Wide hero creative</sub></td>
 <td align="center"><sub>Feature module</sub></td>
 <td align="center"><sub>Hero band, lifestyle</sub></td>
 <td align="center"><sub>Café feature, 3:2</sub></td>
@@ -197,11 +197,11 @@ Real outputs from the five user-facing `product-shots-*` skills. Two products, o
 
 ## The Problem
 
-One SKU on a cross-border listing needs **a brutal visual pipeline**: 7 Amazon images at the right ratio and white-background spec, an A+ detail page with module-to-module consistency, a 9-angle on-model shoot for clothing or footwear, 4-8 ad-creative variants across TikTok / Meta / Google, and 6 social posts sized for 5 platforms — all rendering the *same* product without drifting into a different SKU.
+One SKU on a cross-border listing can require a main image, alternate listing images, A+ template assets, ad variants, and social crops. Each artifact needs the right source facts, canvas, and review instead of one generic prompt reused everywhere.
 
 Sellers either pay a closed SaaS to do it (and hand over their brand assets), hire a studio (slow, expensive, single-channel), or burn weeks tuning Midjourney prompts by hand. None of those compose with the rest of an AI-first workflow.
 
-`product-shots` ships the same pipeline as **open-source Claude Code skills**. It runs in your terminal, lives next to your other skills, never sees your assets outside your machine, and outputs files you fully own.
+`product-shots` ships this workflow as open-source Agent Skills. In Codex it uses the built-in image-generation capability by default. An isolated Python gateway client remains available for users who explicitly choose API or CLI automation.
 
 **If you sell on Amazon, Shopify, TikTok Shop, or an independent storefront — and you want the visual production layer to be code you control, not a subscription — you're the target user.**
 
@@ -211,12 +211,12 @@ Seven skills, ordered by what carries the most weight in a real listing. The fir
 
 | Skill | What you get |
 |---|---|
-| [`product-shots-multi-angle`](#skills) | One reference photo of a model + outfit → **9 consistent angles** of the same look. Fourteen identity anchors (face, hair, skin, eyes, outfit, accessories, lighting, camera, …) lock so the front-3/4 and back-3/4 read as the same person in the same garment. The killer feature for **fashion-on-model lookbooks**. |
-| [`product-shots-detail-page`](#skills) | A full **A+ Content** detail-page module set — hero band, feature grid, lifestyle scene, size/spec callouts — with cross-image consistency anchors so the SKU doesn't morph between modules. |
-| [`product-shots-main-image`](#skills) | Marketplace-compliant **main + secondary images**. Amazon's 9 mandatory rules (pure white, ≥85% frame fill, no text/logos/watermarks, even studio light, apparel exceptions) are encoded as prompt fields — compliance is decided before the model renders, not patched after. Auto-adapts to category-specific norms (electronics vs apparel vs grocery). |
+| [`product-shots-multi-angle`](#skills) | One reference photo of a model + outfit → a 9-angle lookbook workflow. Identity anchors and per-frame review reduce drift; they do not guarantee biometric or garment consistency. |
+| [`product-shots-detail-page`](#skills) | **Basic or Premium A+ Content assets** mapped to templates selected in Content Manager, with exact image-box dimensions, desktop/mobile preview, and grounded SKU references. |
+| [`product-shots-main-image`](#skills) | Amazon **main + alternate images** generated against sourced marketplace/category constraints, followed by file checks and mandatory visual review. |
 | [`product-shots-ad-creative`](#skills) | Platform-native ad creatives across **8 platforms** — Meta, TikTok, Google Display, Google Demand Gen, YouTube, Pinterest, LinkedIn, X. Per-platform style profiles, banned-words filter, user copy preserved verbatim. |
 | [`product-shots-social-post`](#skills) | Feed / Story / Reel / Carousel posts with industry-aware DNA (beauty vs hardware vs apparel each get a different visual language) and a 14-point self-check before render. |
-| [`product-shots-image-gen`](#skills) | The shared **image-gen engine**. One API surface across OpenAI `gpt-image-2`, Gemini `gemini-3-pro-image-preview`, and Flux families. OmniMaaS-gateway compatible — endpoint is one env var, no vendor lock-in. Auto-resizes oversize references, retries with sane backoff. |
+| [`product-shots-image-gen`](#skills) | The shared execution workflow. Codex built-in image generation is the default and needs no external key. Explicit API mode supports the documented OpenAI/Gemini gateway routes, validates inputs/responses, saves every result, and produces manifests. |
 | [`product-shots`](#skills) | The **intent router** at the front door. Four-stage clarification (≤4 rounds), Visual DNA injection (platform × industry), then dispatch to one of the five business skills above. Stops underspecified prompts from wasting a render. |
 
 > **What product-shots is not:** a generic design tool. It does not write copy, build landing pages, or replace a brand designer. Every skill is sharpened around one job in a cross-border seller's daily workflow.
@@ -226,7 +226,7 @@ Seven skills, ordered by what carries the most weight in a real listing. The fir
 Three distinct operations. Pick the one that matches your job:
 
 ```text
-"Generate Amazon listing photos for this product"            — 7 marketplace-compliant images (main + 6 secondary), white-background spec auto-applied.
+"Generate Amazon listing photos for this product"            — main + alternate images generated against current recorded constraints and reviewed per slot.
 "Get a 9-angle shoot of this dress"                          — fashion-on-model lookbook: front / back / side / 3/4 / detail / hanger / lifestyle, 14 identity anchors locked.
 "Make cross-platform ad creatives for this product"          — Meta + TikTok + Google + YouTube variants in correct ratios, platform style applied, copy preserved verbatim.
 ```
@@ -241,10 +241,12 @@ npx skills add motiful/product-shots
 
 This registers the seven skills with whichever Agent Skills harness you're running (Claude Code, Codex, Cursor, Windsurf, GitHub Copilot).
 
-**Configure the image backend** — `product-shots-image-gen` reads its API key from one of these env vars in priority order:
+**Codex:** no image API key is required. `product-shots-image-gen` uses Codex's built-in image-generation capability by default.
+
+**Optional API/CLI mode:** configure a gateway only when you explicitly want provider/model controls or unattended API automation:
 
 ```bash
-# Option A — UCWS / Cloubic / OmniMaaS gateway (preferred)
+# Option A — Cloubic / OmniMaaS gateway
 export OMNIMAAS_API_KEY='sk-...'
 # optional: defaults to https://api.omnimaas.com/v1 when API key is set
 export OMNIMAAS_BASE_URL='https://api.omnimaas.com/v1'
@@ -258,7 +260,7 @@ echo "sk-..." > ~/.product_shots_imagegen_api_key
 chmod 600 ~/.product_shots_imagegen_api_key
 ```
 
-API keys are only ever sent via the `Authorization` header — never logged, never written to stdout. The skill **never asks you to fork the repo or paste your key into chat**.
+Install API-mode dependencies into an isolated environment with `bash skills/product-shots-image-gen/scripts/setup.sh`, then use its `scripts/run.sh` wrapper. API keys are sent only in the `Authorization` header and are never printed.
 
 **Manual registration** (clone + symlink — only if you don't want the `npx skills` route). The skills are platform-agnostic — register in whichever Agent Skills harness root your editor uses:
 
@@ -298,11 +300,11 @@ Two real scenarios, end-to-end. Both start from a single reference photo in your
 What `product-shots` will do, in order:
 
 1. **Clarify** category (small kitchen appliance), market (US Amazon), brand voice in ≤4 questions.
-2. **Dispatch** `product-shots-main-image` → 7 compliant images, white-background, ≥85% fill, no overlay text on the main.
-3. **Dispatch** `product-shots-detail-page` → A+ hero band + 3 feature modules + 1 lifestyle scene + 1 spec callout. Same SKU across all six modules — no model drift.
+2. **Dispatch** `product-shots-main-image` → a main image plus six alternate slots, each generated and reviewed against the recorded US/category rules.
+3. **Dispatch** `product-shots-detail-page` → assets for the Basic or Premium A+ templates selected in Content Manager, with the original SKU references passed to every call.
 4. **Dispatch** `product-shots-ad-creative` → 4 variants targeting Meta feed, Meta story, TikTok feed, YouTube short. Each in correct ratio with platform-native styling.
 
-Output: 18 PNGs, organized by skill, ready to upload.
+Output: organized image files, manifests, and validation reports. Review Content Manager previews and remaining manual checks before upload.
 
 ### Scenario B — Women's dress, 9-angle shoot + social rollout
 
@@ -317,7 +319,7 @@ What happens:
 2. `product-shots-multi-angle` locks face, hair, skin, eyes, outfit, accessories, lighting, and camera — then renders front / 3/4 front / side / 3/4 back / back / detail (closeup) / on-hanger / lifestyle (indoor) / lifestyle (outdoor).
 3. `product-shots-social-post` applies the apparel industry DNA preset (editorial, warm-neutral palette, type hierarchy) and produces 3 feed posts (1:1) + 2 stories (9:16), all derived from the same 9-angle set so the campaign reads as one shoot.
 
-Output: 14 images. The model is recognizably the *same* person wearing the *same* dress in every frame — that's the whole point.
+Output: 14 requested images plus a manifest. Identity and garment consistency are review goals, not guaranteed model properties.
 
 ---
 
@@ -333,26 +335,24 @@ Each skill is self-contained — a `SKILL.md` plus its `references/` and `script
 |---|---|---|
 | `product-shots` | (front door for all of the below) | Clarified, DNA-injected dispatch to one specialist |
 | `product-shots-multi-angle` | "9-angle shoot of this dress" | 9 identity-locked angles, same model in same outfit |
-| `product-shots-detail-page` | "build an A+ detail page for this" | Hero + feature + lifestyle + spec modules, consistent SKU |
-| `product-shots-main-image` | "Amazon main image for this product" | Marketplace-compliant main + secondary set |
+| `product-shots-detail-page` | "build an A+ detail page for this" | Image assets mapped to selected Basic/Premium A+ templates |
+| `product-shots-main-image` | "Amazon main image for this product" | Main + alternate set with validation reports |
 | `product-shots-ad-creative` | "cross-platform ad creatives" | 8-platform ad variants, per-platform style profiles |
 | `product-shots-social-post` | "Instagram / TikTok posts for this" | Feed / Story / Reel / Carousel with industry DNA |
-| `product-shots-image-gen` | (called by the others; or `"just generate: <prompt>"`) | Raw image generation across OpenAI / Gemini / Flux |
+| `product-shots-image-gen` | (called by the others; or `"just generate: <prompt>"`) | Built-in generation by default; optional OpenAI/Gemini API mode |
 
 ## How It Works
 
-`product-shots` pushes the hard work — compliance rules, platform specs, identity anchors, banned-words — **upstream of the model** as prompt fields. Compliance becomes a verifiable intermediate artifact, not a post-hoc check. Model selection is part of the skill, not the user's job: CJK long headlines and photoreal UGC route to `gpt-image-2`; golden-hour lifestyle photoreal routes to `gemini-3-pro-image-preview`. The `product-shots-image-gen` engine handles the actual dispatch, retries oversized references, and falls back across providers when one returns an empty image.
-
-→ [Architecture notes](docs/how-it-works.md)
+`product-shots` turns sourced constraints into a brief, generates one artifact per slot, inspects the actual output, runs deterministic file checks, and records the result in a manifest. Prompt constraints reduce errors but do not prove compliance or identity preservation. Codex uses built-in image generation; optional API mode uses one explicitly selected OpenAI or Gemini gateway route and never performs silent provider failover.
 
 ## What's Inside
 
 ```text
 skills/
   product-shots/              — intent router (4-stage clarification + Visual DNA injection)
-  product-shots-image-gen/    — unified image-gen engine (OpenAI / Gemini / Flux)
-  product-shots-main-image/   — Amazon 9 MUST rules + category profiles
-  product-shots-detail-page/  — A+ module set with cross-image consistency anchors
+  product-shots-image-gen/    — built-in workflow + optional OpenAI/Gemini API client + validators
+  product-shots-main-image/   — sourced Amazon rules + category-aware review
+  product-shots-detail-page/  — Basic/Premium A+ template asset workflow
   product-shots-multi-angle/  — 14-anchor identity lock, fashion-editorial portraits
   product-shots-ad-creative/  — 8-platform style profiles, banned-words filter
   product-shots-social-post/  — 7-industry DNA presets, 14-point self-check
@@ -363,7 +363,7 @@ LICENSE           — MIT
 
 ## Compatibility
 
-Built against the [Agent Skills](https://agentskills.io) protocol — runs in Claude Code, Codex, Cursor, Windsurf, and GitHub Copilot. No MCP server, no custom runtime, no proprietary client. The image backend is endpoint-agnostic: any OpenAI-SDK-compatible gateway works.
+Built against the [Agent Skills](https://agentskills.io) protocol. The default path requires a host with a built-in image-generation capability, such as Codex. Hosts without one can use the explicitly configured Python API client when their gateway implements the documented OpenAI/Gemini-compatible response shapes.
 
 ## Contributing
 
